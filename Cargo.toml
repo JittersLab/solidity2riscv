@@ -1,0 +1,23 @@
+[package]
+name = "solidity2riscv"
+version = "0.1.0"
+edition = "2021"
+authors = ["Your Name <your.email@example.com>"]
+description = "A compiler that translates Solidity to RISC-V assembly"
+
+[dependencies]
+# Parser related
+nom = "7.1"  # For building parser
+logos = "0.13"  # For lexical analysis
+
+# Utility libraries
+thiserror = "1.0"  # Error handling
+anyhow = "1.0"  # Error handling
+log = "0.4"  # Logging
+env_logger = "0.10"  # Logging implementation
+
+# Testing related
+proptest = "1.2"  # Property testing
+
+[dev-dependencies]
+criterion = "0.5"  # Benchmarking
