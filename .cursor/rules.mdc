@@ -1,0 +1,138 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# Solidity2RISC-V 编译器项目 Cursor 规则
+
+## 代码格式化规则
+```json
+{
+  "rustfmt": {
+    "max_width": 100,
+    "tab_spaces": 4,
+    "chain_width": 60,
+    "wrap_comments": true,
+    "format_strings": true,
+    "reorder_imports": true
+  }
+}
+```
+
+## 代码检查规则
+```json
+{
+  "clippy": {
+    "warnings": "deny",
+    "allow": [
+      "clippy::needless_return",
+      "clippy::module_name_repetitions"
+    ],
+    "deny": [
+      "clippy::unwrap_used",
+      "clippy::expect_used",
+      "clippy::panic"
+    ]
+  }
+}
+```
+
+## 测试规则
+```json
+{
+  "test": {
+    "coverage": {
+      "minimum": 80,
+      "exclude": ["tests/", "benches/"]
+    },
+    "benchmarks": {
+      "enabled": true,
+      "threshold": "0.5%"
+    }
+  }
+}
+```
+
+## 文档规则
+```json
+{
+  "documentation": {
+    "require_docs": true,
+    "public_api": true,
+    "examples": true,
+    "links": true
+  }
+}
+```
+
+## 提交规则
+```json
+{
+  "commit": {
+    "message": {
+      "type": ["feat", "fix", "docs", "style", "refactor", "test", "chore"],
+      "scope": ["frontend", "ir", "backend", "tests", "ci"],
+      "subject": {
+        "min_length": 10,
+        "max_length": 72
+      },
+      "format": "type(scope): subject",
+      "examples": [
+        "feat(frontend): add lexer for basic data types",
+        "fix(ir): correct memory allocation in function calls",
+        "docs(backend): update RISC-V code generation guide",
+        "style(parser): reformat code according to rustfmt",
+        "refactor(tests): improve test coverage for arithmetic operations",
+        "test(ci): add GitHub Actions workflow for continuous integration",
+        "chore(deps): update nom to version 7.1.0"
+      ]
+    }
+  }
+}
+```
+
+## 规则说明
+
+### 代码格式化
+- 使用 rustfmt 进行代码格式化
+- 最大行宽设置为 100 字符
+- 使用 4 空格缩进
+- 自动格式化注释和字符串
+- 自动重新排序导入语句
+
+### 代码检查
+- 使用 clippy 进行代码检查
+- 禁止使用 unwrap 和 expect
+- 禁止使用 panic
+- 允许特定的警告（如 needless_return）
+
+### 测试要求
+- 要求最低 80% 的测试覆盖率
+- 排除测试和基准测试目录
+- 启用基准测试
+- 设置性能基准阈值为 0.5%
+
+### 文档要求
+- 所有公共 API 必须有文档
+- 必须包含示例代码
+- 文档中必须包含相关链接
+
+### 提交规范
+- 使用的自然语言: English
+- 使用约定式提交格式（Conventional Commits）
+- 允许的提交类型：
+  - `feat`: 新功能
+  - `fix`: 错误修复
+  - `docs`: 文档更新
+  - `style`: 代码格式调整
+  - `refactor`: 代码重构
+  - `test`: 测试相关
+  - `chore`: 构建过程或辅助工具的变动
+- 允许的范围：
+  - `frontend`: 前端相关（词法分析、语法分析）
+  - `ir`: 中间表示相关
+  - `backend`: 后端相关（RISC-V 代码生成）
+  - `tests`: 测试相关
+  - `ci`: 持续集成相关
+- 提交信息主题长度限制：10-72 字符
+- 提交信息格式：`type(scope): subject`
