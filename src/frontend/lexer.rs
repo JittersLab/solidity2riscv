@@ -49,6 +49,14 @@ pub enum Token {
     DoubleEquals,
     #[token("!=")]
     NotEquals,
+    #[token(">")]
+    GreaterThan,
+    #[token("<")]
+    LessThan,
+    #[token(">=")]
+    GreaterThanOrEqual,
+    #[token("<=")]
+    LessThanOrEqual,
     
     // 分隔符
     #[token("(")]
@@ -96,6 +104,7 @@ impl<'a> Lexer<'a> {
         }
     }
 
+    #[allow(dead_code)]
     pub fn peek(&mut self) -> Option<(Token, &'a str)> {
         if self.peeked.is_none() {
             self.peeked = match self.inner.next() {
@@ -130,7 +139,7 @@ mod tests {
     #[test]
     fn test_basic_tokens() {
         let input = "function add(uint a, uint b) returns (uint) { return a + b; }";
-        let mut lexer = Lexer::new(input);
+        let lexer = Lexer::new(input);
         let tokens: Vec<_> = lexer.collect();
 
         let expected = vec![
@@ -165,7 +174,7 @@ mod tests {
     #[test]
     fn test_number_literals() {
         let input = "123 456 0 789";
-        let mut lexer = Lexer::new(input);
+        let lexer = Lexer::new(input);
         let tokens: Vec<_> = lexer.collect();
 
         assert_eq!(tokens.len(), 4);
@@ -177,7 +186,7 @@ mod tests {
     #[test]
     fn test_string_literals() {
         let input = r#""hello" "world" "test""#;
-        let mut lexer = Lexer::new(input);
+        let lexer = Lexer::new(input);
         let tokens: Vec<_> = lexer.collect();
 
         assert_eq!(tokens.len(), 3);
@@ -196,7 +205,7 @@ mod tests {
                 return 42;
             }
         "#;
-        let mut lexer = Lexer::new(input);
+        let lexer = Lexer::new(input);
         let tokens: Vec<_> = lexer.collect();
 
         // 注释应该被跳过，不会出现在token流中

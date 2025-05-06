@@ -5,6 +5,7 @@ mod frontend;
 mod ir;
 mod backend;
 
+use frontend::lexer::Lexer;
 use frontend::parser::Parser;
 use backend::riscv::RiscVGenerator;
 use ir::IRType;
@@ -34,8 +35,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // 读取输入文件
     let source = fs::read_to_string(input_file)?;
 
-    // 解析 Solidity 代码
-    let mut parser = Parser::new(&source);
+    // 词法分析
+    let lexer = Lexer::new(&source);
+    let tokens: Vec<_> = lexer.collect();
+
+    // 语法分析
+    let mut parser = Parser::new(tokens);
     let functions = parser.parse()?;
 
     // 生成 RISC-V 汇编代码

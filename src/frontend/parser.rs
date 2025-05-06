@@ -1,5 +1,6 @@
-use crate::frontend::lexer::{Lexer, Token};
+use crate::frontend::lexer::Token;
 
+#[allow(dead_code)]
 #[derive(Debug)]
 pub enum Expr {
     Number(i64),
@@ -9,6 +10,7 @@ pub enum Expr {
     BinaryOp(Box<Expr>, BinaryOp, Box<Expr>),
 }
 
+#[allow(dead_code)]
 #[derive(Debug)]
 pub enum BinaryOp {
     Add,
@@ -17,8 +19,13 @@ pub enum BinaryOp {
     Divide,
     Equals,
     NotEquals,
+    GreaterThan,
+    LessThan,
+    GreaterThanOrEqual,
+    LessThanOrEqual,
 }
 
+#[allow(dead_code)]
 #[derive(Debug)]
 pub struct Function {
     pub name: String,
@@ -27,6 +34,7 @@ pub struct Function {
     pub body: Vec<Statement>,
 }
 
+#[allow(dead_code)]
 #[derive(Debug)]
 pub enum Statement {
     VariableDecl(String, String, Option<Expr>), // type, name, initializer
@@ -35,20 +43,40 @@ pub enum Statement {
 }
 
 pub struct Parser<'a> {
-    lexer: Lexer<'a>,
+    tokens: Vec<(Token, &'a str)>,
+    current: usize,
 }
 
 impl<'a> Parser<'a> {
-    pub fn new(input: &'a str) -> Self {
+    pub fn new(tokens: Vec<(Token, &'a str)>) -> Self {
         Self {
-            lexer: Lexer::new(input),
+            tokens,
+            current: 0,
+        }
+    }
+
+    fn next(&mut self) -> Option<(Token, &'a str)> {
+        if self.current < self.tokens.len() {
+            let token = self.tokens[self.current].clone();
+            self.current += 1;
+            Some(token)
+        } else {
+            None
+        }
+    }
+
+    fn peek(&self) -> Option<(Token, &'a str)> {
+        if self.current < self.tokens.len() {
+            Some(self.tokens[self.current].clone())
+        } else {
+            None
         }
     }
 
     pub fn parse(&mut self) -> Result<Vec<Function>, String> {
         let mut functions = Vec::new();
         
-        while let Some((token, _)) = self.lexer.next() {
+        while let Some((token, _)) = self.next() {
             match token {
                 Token::Function => {
                     if let Some(func) = self.parse_function()? {
@@ -64,7 +92,7 @@ impl<'a> Parser<'a> {
 
     fn parse_function(&mut self) -> Result<Option<Function>, String> {
         // 解析函数名
-        let name = match self.lexer.next() {
+        let name = match self.next() {
             Some((Token::Identifier, name)) => name.to_string(),
             _ => return Ok(None),
         };
@@ -90,13 +118,13 @@ impl<'a> Parser<'a> {
         let mut params = Vec::new();
         
         // 检查左括号
-        match self.lexer.next() {
+        match self.next() {
             Some((Token::LParen, _)) => (),
             _ => return Err("Expected '(' after function name".to_string()),
         }
 
         // 如果下一个 token 是右括号，说明没有参数
-        match self.lexer.next() {
+        match self.next() {
             Some((Token::RParen, _)) => return Ok(params),
             Some((token, _)) => {
                 let param_type = match token {
@@ -108,7 +136,7 @@ impl<'a> Parser<'a> {
                     _ => return Err("Expected parameter type".to_string()),
                 }.to_string();
 
-                match self.lexer.next() {
+                match self.next() {
                     Some((Token::Identifier, name)) => {
                         params.push((param_type, name.to_string()));
                     }
@@ -120,9 +148,9 @@ impl<'a> Parser<'a> {
 
         // 解析更多参数
         loop {
-            match self.lexer.next() {
+            match self.next() {
                 Some((Token::Comma, _)) => {
-                    match self.lexer.next() {
+                    match self.next() {
                         Some((token, _)) => {
                             let param_type = match token {
                                 Token::Uint => "uint",
@@ -133,7 +161,7 @@ impl<'a> Parser<'a> {
                                 _ => return Err("Expected parameter type".to_string()),
                             }.to_string();
 
-                            match self.lexer.next() {
+                            match self.next() {
                                 Some((Token::Identifier, name)) => {
                                     params.push((param_type, name.to_string()));
                                 }
@@ -155,21 +183,21 @@ impl<'a> Parser<'a> {
         let mut returns = Vec::new();
         
         // 检查 returns 关键字
-        match self.lexer.next() {
+        match self.next() {
             Some((Token::Returns, _)) => (),
             Some(_) => return Ok(returns), // 如果不是 returns，说明没有返回值
             None => return Ok(returns),    // 如果到达输入末尾，也说明没有返回值
         }
 
         // 检查左括号
-        match self.lexer.next() {
+        match self.next() {
             Some((Token::LParen, _)) => (),
             _ => return Err("Expected '(' after returns".to_string()),
         }
 
         loop {
             // 解析返回类型
-            let return_type = match self.lexer.next() {
+            let return_type = match self.next() {
                 Some((Token::Uint, _)) => "uint".to_string(),
                 Some((Token::Int, _)) => "int".to_string(),
                 Some((Token::Bool, _)) => "bool".to_string(),
@@ -183,7 +211,7 @@ impl<'a> Parser<'a> {
                 returns.push(return_type);
 
                 // 检查是否有更多返回类型
-                match self.lexer.next() {
+                match self.next() {
                     Some((Token::Comma, _)) => continue,
                     Some((Token::RParen, _)) => break,
                     _ => return Err("Expected ',' or ')'".to_string()),
@@ -198,69 +226,86 @@ impl<'a> Parser<'a> {
         let mut statements = Vec::new();
         
         // 检查左大括号
-        match self.lexer.next() {
+        match self.next() {
             Some((Token::LBrace, _)) => (),
             _ => return Err("Expected '{' at start of function body".to_string()),
         }
 
         loop {
-            match self.lexer.next() {
-                Some((Token::RBrace, _)) => break,
+            match self.peek() {
+                Some((Token::RBrace, _)) => {
+                    self.next(); // 消耗右大括号
+                    break;
+                }
                 Some((Token::Return, _)) => {
-                    // 处理 return 语句
-                    match self.lexer.peek() {
+                    self.next(); // 消耗 return 关键字
+                    let expr = match self.peek() {
                         Some((Token::Semicolon, _)) => {
-                            self.lexer.next(); // 消耗分号
-                            statements.push(Statement::Return(None));
+                            self.next(); // 消耗分号
+                            None
                         }
-                        Some(_) => {
+                        _ => {
                             let expr = self.parse_expr()?;
-                            statements.push(Statement::Return(Some(expr)));
-                            
-                            // 确保有分号
-                            match self.lexer.next() {
+                            match self.next() {
                                 Some((Token::Semicolon, _)) => (),
                                 _ => return Err("Expected ';' after return expression".to_string()),
                             }
+                            Some(expr)
                         }
-                        None => return Err("Unexpected end of input".to_string()),
-                    }
+                    };
+                    statements.push(Statement::Return(expr));
                 }
-                Some((Token::Uint, _)) | Some((Token::Int, _)) | Some((Token::Bool, _)) | 
+                Some((Token::Uint, _)) | Some((Token::Int, _)) | Some((Token::Bool, _)) |
                 Some((Token::Address, _)) | Some((Token::String, _)) => {
-                    // 变量声明
-                    let var_type = match self.lexer.next() {
-                        Some((Token::Uint, _)) => "uint",
-                        Some((Token::Int, _)) => "int",
-                        Some((Token::Bool, _)) => "bool",
-                        Some((Token::Address, _)) => "address",
-                        Some((Token::String, _)) => "string",
+                    let type_token = self.next().unwrap(); // 消耗类型
+                    let var_type = match type_token {
+                        (Token::Uint, _) => "uint",
+                        (Token::Int, _) => "int",
+                        (Token::Bool, _) => "bool",
+                        (Token::Address, _) => "address",
+                        (Token::String, _) => "string",
                         _ => return Err("Expected variable type".to_string()),
                     }.to_string();
 
-                    let var_name = match self.lexer.next() {
+                    let var_name = match self.next() {
                         Some((Token::Identifier, name)) => name.to_string(),
                         _ => return Err("Expected variable name".to_string()),
                     };
 
-                    let initializer = match self.lexer.next() {
-                        Some((Token::Equals, _)) => Some(self.parse_expr()?),
-                        Some((Token::Semicolon, _)) => None,
-                        _ => return Err("Expected '=' or ';'".to_string()),
-                    };
-
-                    if initializer.is_some() {
-                        // 如果有初始化器，确保有分号
-                        match self.lexer.next() {
-                            Some((Token::Semicolon, _)) => (),
-                            _ => return Err("Expected ';' after variable initialization".to_string()),
+                    let initializer = match self.next() {
+                        Some((Token::Equals, _)) => {
+                            let expr = self.parse_expr()?;
+                            match self.next() {
+                                Some((Token::Semicolon, _)) => (),
+                                _ => return Err("Expected ';' after variable declaration".to_string()),
+                            }
+                            Some(expr)
                         }
-                    }
+                        Some((Token::Semicolon, _)) => None,
+                        _ => return Err("Expected '=' or ';' after variable name".to_string()),
+                    };
 
                     statements.push(Statement::VariableDecl(var_type, var_name, initializer));
                 }
-                Some(_) => continue,
-                None => return Err("Unexpected end of input".to_string()),
+                Some((Token::Identifier, _)) => {
+                    let name = match self.next() {
+                        Some((Token::Identifier, name)) => name.to_string(),
+                        _ => return Err("Expected identifier".to_string()),
+                    };
+
+                    match self.next() {
+                        Some((Token::Equals, _)) => {
+                            let expr = self.parse_expr()?;
+                            match self.next() {
+                                Some((Token::Semicolon, _)) => (),
+                                _ => return Err("Expected ';' after assignment".to_string()),
+                            }
+                            statements.push(Statement::Assignment(name, expr));
+                        }
+                        _ => return Err("Expected '=' after identifier".to_string()),
+                    }
+                }
+                _ => return Err("Expected statement".to_string()),
             }
         }
 
@@ -268,58 +313,83 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_expr(&mut self) -> Result<Expr, String> {
-        let mut expr = match self.lexer.next() {
-            Some((Token::Identifier, name)) => Ok(Expr::Identifier(name.to_string())),
-            Some((Token::Number, num)) => {
-                match num.parse::<i64>() {
-                    Ok(n) => Ok(Expr::Number(n)),
-                    Err(_) => Err("Invalid number".to_string()),
-                }
-            }
-            Some((Token::LParen, _)) => {
-                let inner_expr = self.parse_expr()?;
-                match self.lexer.next() {
-                    Some((Token::RParen, _)) => Ok(inner_expr),
-                    _ => Err("Expected ')' after expression".to_string()),
-                }
-            }
-            Some(token) => Err(format!("Expected expression, got {:?}", token)),
-            None => Err("Unexpected end of input".to_string()),
-        }?;
+        let mut left = self.parse_term()?;
 
-        // 查看下一个token，看是否是运算符
-        match self.lexer.peek() {
-            Some((Token::Plus, _)) => {
-                self.lexer.next(); // 消耗运算符
-                let rhs = self.parse_expr()?;
-                expr = Expr::BinaryOp(Box::new(expr), BinaryOp::Add, Box::new(rhs));
-            }
-            Some((Token::Minus, _)) => {
-                self.lexer.next(); // 消耗运算符
-                let rhs = self.parse_expr()?;
-                expr = Expr::BinaryOp(Box::new(expr), BinaryOp::Subtract, Box::new(rhs));
-            }
-            Some((Token::Star, _)) => {
-                self.lexer.next(); // 消耗运算符
-                let rhs = self.parse_expr()?;
-                expr = Expr::BinaryOp(Box::new(expr), BinaryOp::Multiply, Box::new(rhs));
-            }
-            Some((Token::Slash, _)) => {
-                self.lexer.next(); // 消耗运算符
-                let rhs = self.parse_expr()?;
-                expr = Expr::BinaryOp(Box::new(expr), BinaryOp::Divide, Box::new(rhs));
-            }
-            Some((Token::Semicolon, _)) | Some((Token::RParen, _)) => {
-                // 如果是分号或右括号，不消耗它，让parse_function_body处理它
-            }
-            Some(token) => {
-                return Err(format!("Expected operator, semicolin, or right parenthesis, got {:?}", token));
-            }
-            None => {
-                return Err("Unexpected end of input".to_string());
+        loop {
+            match self.peek() {
+                Some((Token::Plus, _)) => {
+                    self.next(); // 消耗运算符
+                    let right = self.parse_term()?;
+                    left = Expr::BinaryOp(Box::new(left), BinaryOp::Add, Box::new(right));
+                }
+                Some((Token::Minus, _)) => {
+                    self.next(); // 消耗运算符
+                    let right = self.parse_term()?;
+                    left = Expr::BinaryOp(Box::new(left), BinaryOp::Subtract, Box::new(right));
+                }
+                Some((Token::GreaterThan, _)) => {
+                    self.next(); // 消耗运算符
+                    let right = self.parse_term()?;
+                    left = Expr::BinaryOp(Box::new(left), BinaryOp::GreaterThan, Box::new(right));
+                }
+                Some((Token::LessThan, _)) => {
+                    self.next(); // 消耗运算符
+                    let right = self.parse_term()?;
+                    left = Expr::BinaryOp(Box::new(left), BinaryOp::LessThan, Box::new(right));
+                }
+                Some((Token::GreaterThanOrEqual, _)) => {
+                    self.next(); // 消耗运算符
+                    let right = self.parse_term()?;
+                    left = Expr::BinaryOp(Box::new(left), BinaryOp::GreaterThanOrEqual, Box::new(right));
+                }
+                Some((Token::LessThanOrEqual, _)) => {
+                    self.next(); // 消耗运算符
+                    let right = self.parse_term()?;
+                    left = Expr::BinaryOp(Box::new(left), BinaryOp::LessThanOrEqual, Box::new(right));
+                }
+                _ => break,
             }
         }
 
-        Ok(expr)
+        Ok(left)
+    }
+
+    fn parse_term(&mut self) -> Result<Expr, String> {
+        let mut left = self.parse_factor()?;
+
+        loop {
+            match self.peek() {
+                Some((Token::Star, _)) => {
+                    self.next(); // 消耗运算符
+                    let right = self.parse_factor()?;
+                    left = Expr::BinaryOp(Box::new(left), BinaryOp::Multiply, Box::new(right));
+                }
+                Some((Token::Slash, _)) => {
+                    self.next(); // 消耗运算符
+                    let right = self.parse_factor()?;
+                    left = Expr::BinaryOp(Box::new(left), BinaryOp::Divide, Box::new(right));
+                }
+                _ => break,
+            }
+        }
+
+        Ok(left)
+    }
+
+    fn parse_factor(&mut self) -> Result<Expr, String> {
+        match self.next() {
+            Some((Token::Number, n)) => Ok(Expr::Number(n.parse().unwrap())),
+            Some((Token::StringLiteral, s)) => Ok(Expr::String(s.to_string())),
+            Some((Token::Boolean, b)) => Ok(Expr::Boolean(b.parse().unwrap())),
+            Some((Token::Identifier, name)) => Ok(Expr::Identifier(name.to_string())),
+            Some((Token::LParen, _)) => {
+                let expr = self.parse_expr()?;
+                match self.next() {
+                    Some((Token::RParen, _)) => Ok(expr),
+                    _ => Err("Expected ')'".to_string()),
+                }
+            }
+            _ => Err("Expected expression".to_string()),
+        }
     }
 } 

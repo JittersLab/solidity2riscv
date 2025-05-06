@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use crate::ir::{IRFunction, Value, Instruction, Terminator};
 
+#[allow(dead_code)]
 pub struct RiscVGenerator {
     registers: HashMap<String, String>,
     stack_offset: i32,

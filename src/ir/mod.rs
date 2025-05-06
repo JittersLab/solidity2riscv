@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+#[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub enum IRType {
     I32,
@@ -9,6 +10,7 @@ pub enum IRType {
     String,
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub struct IRFunction {
     pub name: String,
@@ -18,6 +20,7 @@ pub struct IRFunction {
     pub blocks: Vec<BasicBlock>,
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub struct BasicBlock {
     pub label: String,
@@ -25,6 +28,7 @@ pub struct BasicBlock {
     pub terminator: Terminator,
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub enum Instruction {
     // 算术运算
@@ -51,6 +55,7 @@ pub enum Instruction {
     Extend(Value),
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub enum Terminator {
     Return(Option<Value>),
@@ -58,6 +63,7 @@ pub enum Terminator {
     Jump(String),
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub enum Value {
     Constant(Constant),
@@ -65,6 +71,7 @@ pub enum Value {
     Temporary(u32),
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub enum Constant {
     I32(i32),
@@ -85,10 +92,12 @@ impl IRFunction {
         }
     }
 
+    #[allow(dead_code)]
     pub fn add_block(&mut self, block: BasicBlock) {
         self.blocks.push(block);
     }
 
+    #[allow(dead_code)]
     pub fn add_local(&mut self, name: String, ty: IRType) {
         self.locals.insert(name, ty);
     }
